@@ -74,9 +74,11 @@ INSERT INTO users (email, full_name, role, is_active) VALUES
 ('yonetici@stok.com', 'Zeynep Yönetici', 'manager', true);
 
 -- 5. Demo Ürünler (Birkaç örnek - gerçek ürünleri sen ekleyeceksin)
--- Kategorilerin ID'lerini alıp kullanacağız
 WITH categories_map AS (
     SELECT id, code FROM categories
+),
+admin_user AS (
+    SELECT id FROM users WHERE email = 'admin@stok.com' LIMIT 1
 )
 INSERT INTO products (sku, name, description, category_id, unit_price, min_stock, barcode, created_by)
 SELECT 
@@ -87,7 +89,7 @@ SELECT
     450.00,
     5,
     '8699876543210',
-    'u1u1u1u1-u1u1-u1u1-u1u1-111111111111'
+    (SELECT id FROM admin_user)
 UNION ALL
 SELECT 
     'YAF-001',
@@ -97,7 +99,7 @@ SELECT
     85.00,
     10,
     '8699876543211',
-    'u1u1u1u1-u1u1-u1u1-u1u1-111111111111'
+    (SELECT id FROM admin_user)
 UNION ALL
 SELECT 
     'OAM-001',
@@ -107,7 +109,61 @@ SELECT
     1250.00,
     3,
     '8699876543212',
-    'u1u1u1u1-u1u1-u1u1-u1u1-111111111111';
+    (SELECT id FROM admin_user);
+
+-- 6. Demo Stok Hareketleri (Birkaç örnek)
+WITH demo_products AS (
+    SELECT id, sku FROM products WHERE sku IN ('OBA-001', 'YAF-001')
+),
+demo_suppliers AS (
+    SELECT id, company FROM suppliers WHERE company IN ('MARTAŞ', 'ÖZAŞ')
+),
+demo_user AS (
+    SELECT id FROM users WHERE email = 'depo@stok.com' LIMIT 1
+),
+demo_location AS (
+    SELECT id FROM locations WHERE name = 'Ana Depo' LIMIT 1
+)
+INSERT INTO stock_movements (product_id, type, quantity, to_location_id, supplier_id, reason, reference, user_id)
+SELECT 
+    (SELECT id FROM demo_products WHERE sku = 'OBA-001'),
+    'in',
+    20,
+    (SELECT id FROM demo_location),
+    (SELECT id FROM demo_suppliers WHERE company = 'MARTAŞ'),
+    'İlk stok girişi',
+    'FT-2024-001',
+    (SELECT id FROM demo_user)
+UNION ALL
+SELECT 
+    (SELECT id FROM demo_products WHERE sku = 'YAF-001'),
+    'in',
+    30,
+    (SELECT id FROM demo_location),
+    (SELECT id FROM demo_suppliers WHERE company = 'ÖZAŞ'),
+    'İlk stok girişi',
+    'FT-2024-002',
+    (SELECT id FROM demo_user);
+
+-- Bir satış örneği
+WITH demo_product AS (
+    SELECT id FROM products WHERE sku = 'OBA-001' LIMIT 1
+),
+demo_user AS (
+    SELECT id FROM users WHERE email = 'depo@stok.com' LIMIT 1
+),
+demo_location AS (
+    SELECT id FROM locations WHERE name = 'Satış Mağazası' LIMIT 1
+)
+INSERT INTO stock_movements (product_id, type, quantity, from_location_id, reason, reference, user_id)
+SELECT 
+    (SELECT id FROM demo_product),
+    'out',
+    8,
+    (SELECT id FROM demo_location),
+    'Müşteri satışı',
+    'SAT-2024-001',
+    (SELECT id FROM demo_user);
 
 -- 6. Demo Stok Hareketleri (Birkaç örnek)
 WITH demo_products AS (
