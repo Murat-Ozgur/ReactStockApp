@@ -73,133 +73,55 @@ INSERT INTO users (email, full_name, role, is_active) VALUES
 ('depo@stok.com', 'Ahmet Depocu', 'staff', true),
 ('yonetici@stok.com', 'Zeynep Yönetici', 'manager', true);
 
--- 5. Demo Ürünler (Birkaç örnek - gerçek ürünleri sen ekleyeceksin)
-WITH categories_map AS (
-    SELECT id, code FROM categories
-),
-admin_user AS (
-    SELECT id FROM users WHERE email = 'admin@stok.com' LIMIT 1
-)
-INSERT INTO products (sku, name, description, category_id, unit_price, min_stock, barcode, created_by)
-SELECT 
-    'OBA-001',
-    'Fren Balata Takımı Ön',
-    'Ön fren balata seti - çeşitli araç modelleri',
-    (SELECT id FROM categories_map WHERE code = 'OBA'),
-    450.00,
-    5,
-    '8699876543210',
-    (SELECT id FROM admin_user)
-UNION ALL
-SELECT 
-    'YAF-001',
-    'Motor Yağ Filtresi',
-    'Yağ filtresi - çeşitli araç modelleri',
-    (SELECT id FROM categories_map WHERE code = 'YAF'),
-    85.00,
-    10,
-    '8699876543211',
-    (SELECT id FROM admin_user)
-UNION ALL
-SELECT 
-    'OAM-001',
-    'Amortisör Ön',
-    'Ön amortisör - çeşitli araç modelleri',
-    (SELECT id FROM categories_map WHERE code = 'OAM'),
-    1250.00,
-    3,
-    '8699876543212',
-    (SELECT id FROM admin_user);
+-- Şimdi ilişkili verileri eklemek için ID'leri alalım
 
--- 6. Demo Stok Hareketleri (Birkaç örnek)
-WITH demo_products AS (
-    SELECT id, sku FROM products WHERE sku IN ('OBA-001', 'YAF-001')
-),
-demo_suppliers AS (
-    SELECT id, company FROM suppliers WHERE company IN ('MARTAŞ', 'ÖZAŞ')
-),
-demo_user AS (
-    SELECT id FROM users WHERE email = 'depo@stok.com' LIMIT 1
-),
-demo_location AS (
-    SELECT id FROM locations WHERE name = 'Ana Depo' LIMIT 1
-)
-INSERT INTO stock_movements (product_id, type, quantity, to_location_id, supplier_id, reason, reference, user_id)
-SELECT 
-    (SELECT id FROM demo_products WHERE sku = 'OBA-001'),
-    'in',
-    20,
-    (SELECT id FROM demo_location),
-    (SELECT id FROM demo_suppliers WHERE company = 'MARTAŞ'),
-    'İlk stok girişi',
-    'FT-2024-001',
-    (SELECT id FROM demo_user)
-UNION ALL
-SELECT 
-    (SELECT id FROM demo_products WHERE sku = 'YAF-001'),
-    'in',
-    30,
-    (SELECT id FROM demo_location),
-    (SELECT id FROM demo_suppliers WHERE company = 'ÖZAŞ'),
-    'İlk stok girişi',
-    'FT-2024-002',
-    (SELECT id FROM demo_user);
+-- 5. Demo Ürünler
+DO $$
+DECLARE
+    v_admin_id UUID;
+    v_cat_oba_id UUID;
+    v_cat_yaf_id UUID;
+    v_cat_oam_id UUID;
+BEGIN
+    -- ID'leri al
+    SELECT id INTO v_admin_id FROM users WHERE email = 'admin@stok.com';
+    SELECT id INTO v_cat_oba_id FROM categories WHERE code = 'OBA';
+    SELECT id INTO v_cat_yaf_id FROM categories WHERE code = 'YAF';
+    SELECT id INTO v_cat_oam_id FROM categories WHERE code = 'OAM';
+    
+    -- Ürünleri ekle
+    INSERT INTO products (sku, name, description, category_id, unit_price, min_stock, barcode, created_by) VALUES
+    ('OBA-001', 'Fren Balata Takımı Ön', 'Ön fren balata seti - çeşitli araç modelleri', v_cat_oba_id, 450.00, 5, '8699876543210', v_admin_id),
+    ('YAF-001', 'Motor Yağ Filtresi', 'Yağ filtresi - çeşitli araç modelleri', v_cat_yaf_id, 85.00, 10, '8699876543211', v_admin_id),
+    ('OAM-001', 'Amortisör Ön', 'Ön amortisör - çeşitli araç modelleri', v_cat_oam_id, 1250.00, 3, '8699876543212', v_admin_id);
+END $$;
 
--- Bir satış örneği
-WITH demo_product AS (
-    SELECT id FROM products WHERE sku = 'OBA-001' LIMIT 1
-),
-demo_user AS (
-    SELECT id FROM users WHERE email = 'depo@stok.com' LIMIT 1
-),
-demo_location AS (
-    SELECT id FROM locations WHERE name = 'Satış Mağazası' LIMIT 1
-)
-INSERT INTO stock_movements (product_id, type, quantity, from_location_id, reason, reference, user_id)
-SELECT 
-    (SELECT id FROM demo_product),
-    'out',
-    8,
-    (SELECT id FROM demo_location),
-    'Müşteri satışı',
-    'SAT-2024-001',
-    (SELECT id FROM demo_user);
-
--- 6. Demo Stok Hareketleri (Birkaç örnek)
-WITH demo_products AS (
-    SELECT id, sku FROM products WHERE sku IN ('OBA-001', 'YAF-001')
-),
-demo_suppliers AS (
-    SELECT id, company FROM suppliers WHERE company IN ('MARTAŞ', 'ÖZAŞ')
-)
-INSERT INTO stock_movements (product_id, type, quantity, to_location_id, supplier_id, reason, reference, user_id)
-SELECT 
-    (SELECT id FROM demo_products WHERE sku = 'OBA-001'),
-    'in',
-    20,
-    'l1l1l1l1-l1l1-l1l1-l1l1-111111111111',
-    (SELECT id FROM demo_suppliers WHERE company = 'MARTAŞ'),
-    'İlk stok girişi',
-    'FT-2024-001',
-    'u1u1u1u1-u1u1-u1u1-u1u1-222222222222'
-UNION ALL
-SELECT 
-    (SELECT id FROM demo_products WHERE sku = 'YAF-001'),
-    'in',
-    30,
-    'l1l1l1l1-l1l1-l1l1-l1l1-111111111111',
-    (SELECT id FROM demo_suppliers WHERE company = 'ÖZAŞ'),
-    'İlk stok girişi',
-    'FT-2024-002',
-    'u1u1u1u1-u1u1-u1u1-u1u1-222222222222';
-
--- Bir satış örneği
-INSERT INTO stock_movements (product_id, type, quantity, from_location_id, reason, reference, user_id)
-SELECT 
-    (SELECT id FROM products WHERE sku = 'OBA-001'),
-    'out',
-    8,
-    'l1l1l1l1-l1l1-l1l1-l1l1-222222222222',
-    'Müşteri satışı',
-    'SAT-2024-001',
-    'u1u1u1u1-u1u1-u1u1-u1u1-222222222222';
+-- 6. Demo Stok Hareketleri
+DO $$
+DECLARE
+    v_user_id UUID;
+    v_location_id UUID;
+    v_product_oba UUID;
+    v_product_yaf UUID;
+    v_supplier_martas UUID;
+    v_supplier_ozas UUID;
+    v_location_magaza UUID;
+BEGIN
+    -- ID'leri al
+    SELECT id INTO v_user_id FROM users WHERE email = 'depo@stok.com';
+    SELECT id INTO v_location_id FROM locations WHERE name = 'Ana Depo';
+    SELECT id INTO v_location_magaza FROM locations WHERE name = 'Satış Mağazası';
+    SELECT id INTO v_product_oba FROM products WHERE sku = 'OBA-001';
+    SELECT id INTO v_product_yaf FROM products WHERE sku = 'YAF-001';
+    SELECT id INTO v_supplier_martas FROM suppliers WHERE company = 'MARTAŞ';
+    SELECT id INTO v_supplier_ozas FROM suppliers WHERE company = 'ÖZAŞ';
+    
+    -- Stok girişleri
+    INSERT INTO stock_movements (product_id, type, quantity, to_location_id, supplier_id, reason, reference, user_id) VALUES
+    (v_product_oba, 'in', 20, v_location_id, v_supplier_martas, 'İlk stok girişi', 'FT-2024-001', v_user_id),
+    (v_product_yaf, 'in', 30, v_location_id, v_supplier_ozas, 'İlk stok girişi', 'FT-2024-002', v_user_id);
+    
+    -- Bir satış
+    INSERT INTO stock_movements (product_id, type, quantity, from_location_id, reason, reference, user_id) VALUES
+    (v_product_oba, 'out', 8, v_location_magaza, 'Müşteri satışı', 'SAT-2024-001', v_user_id);
+END $$;
